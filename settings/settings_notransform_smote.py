@@ -1,0 +1,104 @@
+# Settings file for the NFI data extraction
+import os
+
+# Input data path, modify for your local architechture
+BASE_DATA_PATH = ''
+
+# Output directory path
+STORE_DATA_PATH = os.path.join(BASE_DATA_PATH, 'store_notransform_smote')
+
+# What sites to process
+DEV_SITES = ['UKR', 'UKF', 'RSF', 'SLO', 'GEM', 'FRM', ]
+SITES = ['RSF', 'NFG', 'NNL', 'NPO', 'NSW', 'FRM', 'GEM', 'SLO', 'UKF', 'UKR']
+
+# What data to use
+# 'Full' = all the data including managed plots
+# 'Noharvest' = Only reserve data without management
+USE_DATA = 'Noharvest'
+
+PIPELINE = [
+    #'components.extract_noharvest',
+    #'components.split_dead_alive',
+    'components.create_test_set',
+    'components.smote_upsampling',
+    'components.append_sites',
+    'components.train_dnn'
+]
+
+APPEND_SITES = {
+    'INPUT_PATH': os.path.join(STORE_DATA_PATH, '{site}'),
+    'INPUT_FNAME': 'tree_biomass_rgr_{site}_bounded_noharvest_{traintest}.csv',
+    'OUTPUT_PATH': os.path.join(STORE_DATA_PATH, 'appended'),
+    'OUTPUT_FNAME': 'tree_biomass_rgr_bounded_noharvest_smote_allsites_{traintest}.csv',
+    'SITES': DEV_SITES,
+    #'SITES': SITES,
+    'TRAIN_TEST': ('test', 'train')
+}
+
+CREATE_TEST_SET = {
+    'INPUT_PATH': os.path.join(BASE_DATA_PATH, 'store_base','{site}'),
+    'INPUT_FNAME': 'tree_biomass_rgr_{site}_bounded_noharvest.csv',
+    'OUTPUT_PATH': os.path.join(STORE_DATA_PATH, '{site}'),
+    'OUTPUT_FNAME': 'tree_biomass_rgr_{site}_bounded_noharvest_{traintest}.csv',
+    #'SITES': DEV_SITES,
+    'SITES': SITES,
+    'TEST_RATIO': 0.2,
+    'STRATIFY': True,
+    'STRAT_COL': ['alive', 'species.cor']
+}
+
+CONNECT_TRAITS = {
+    'INPUT_PATH': os.path.join(BASE_DATA_PATH, 'store','{site}'),
+    'INPUT_PATH_TRAIT': os.path.join(BASE_DATA_PATH, '{site}'),
+    'OUTPUT_PATH': os.path.join(BASE_DATA_PATH, 'store', '{site}'),
+    #'SITES': DEV_SITES,
+    'SITES': SITES,
+}
+
+EXTRACT_NOHARVEST = {
+    'INPUT_PATH': os.path.join(BASE_DATA_PATH, '{site}'),
+    'OUTPUT_PATH': os.path.join(STORE_DATA_PATH,  '{site}'),
+    'OFNAME_BIOMASS': '01_treedata-biomass_TMt_{site}_noharvest.csv',
+    'OFNAME_STAND': '02_stand-level-dynamics_TMt_{site}_noharvest.csv',
+    #'SITES': DEV_SITES,
+    'SITES': SITES,
+    'STRATEGY': 'plot'  # Plot or tree (default=plot)
+}
+
+SMOTE_UPSAMPLING = {
+    'INPUT_PATH': os.path.join(STORE_DATA_PATH,'{site}'),
+    'OUTPUT_PATH': os.path.join(STORE_DATA_PATH, '{site}'),
+    'INPUT_FNAME': 'tree_biomass_rgr_{site}_bounded_noharvest_train.csv',
+    'OUTPUT_FNAME': 'tree_biomass_rgr_{site}_bounded_noharvest_smote_train.csv',
+    'SITES': DEV_SITES,
+    #'SITES': SITES,
+    'VARIABLES': ['gr_r', 'biomass_before_death', 'dt']
+}
+
+SPLIT_DEAD_ALIVE = {
+    'INPUT_PATH': os.path.join(STORE_DATA_PATH,'{site}'),
+    'OUTPUT_PATH': os.path.join(STORE_DATA_PATH, '{site}'),
+    'INPUT_FNAME': '01_treedata-biomass_TMt_{site}_noharvest.csv',
+    'OUTPUT_FNAME': 'tree_biomass_rgr_{site}_bounded_noharvest.csv',
+    #'SITES': DEV_SITES,
+    'SITES': SITES,
+}
+
+TRAIN_DNN = {
+    'INPUT_PATH': os.path.join(STORE_DATA_PATH,'appended'),
+    'OUTPUT_PATH': os.path.join(STORE_DATA_PATH, 'artifacts'),
+    'TRAIN_INPUT_FNAME': 'tree_biomass_rgr_bounded_noharvest_smote_allsites_train.csv',
+    'ARTIFACT_NAME': 'DNN_4_LPJG_input_notrans_smote_allsites.pt',
+    'EPOCHS': 3000,
+    'LEARN_RATE': 0.00003,
+    'BATCH_SIZE': 512,
+    'FEATURES': ['gr_r', 'biomass_before_death', 'dt']
+}
+
+TEST_DNN = {
+    'INPUT_PATH': os.path.join(STORE_DATA_PATH,'appended'),
+    'OUTPUT_PATH':os.path.join(STORE_DATA_PATH,'report'),
+    'STATE_PATH': os.path.join(STORE_DATA_PATH, 'artifacts', 'DNN_4_LPJG_input_notrans_smote_allsites.pt'),
+    'TEST_DATA_FNAME': 'tree_biomass_rgr_bounded_noharvest_smote_allsites_test.csv',
+    'FEATURES': ['gr_r', 'biomass_before_death', 'dt'], # The number of features the DNN was trained with. Should correspond to FEATURES in TRAIN_DNN
+}
